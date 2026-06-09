@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SPTG2026 Aptitude Trainers</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--s1:#0d1117;--s2:#161b22;--border:#21262d;
+  --text:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --cyan:#39d0ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;--blue:#58a6ff;--purple:#bc8cff;--orange:#ffa657;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Courier New',monospace;-webkit-tap-highlight-color:transparent}
+body{display:flex;flex-direction:column;min-height:100vh}
+
+#wrap{max-width:680px;margin:0 auto;padding:48px 20px 40px;flex:1;width:100%}
+
+.brand{text-align:center;margin-bottom:8px}
+.logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:18px}
+.logo svg{width:34px;height:34px}
+.brand h1{font-size:26px;font-weight:700;letter-spacing:3px;color:var(--cyan);text-transform:uppercase}
+.brand .tag{font-size:12px;color:var(--text2);letter-spacing:2px;margin-top:6px}
+.brand .sub{font-size:11px;color:var(--text3);letter-spacing:1px;margin-top:14px;line-height:1.7;max-width:440px;margin-left:auto;margin-right:auto}
+
+.divider{height:1px;background:var(--border);margin:36px 0 28px}
+.section-label{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:16px}
+
+.cards{display:flex;flex-direction:column;gap:14px}
+.card{display:block;text-decoration:none;background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:22px;transition:all 0.18s;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);opacity:0.8}
+.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card:active{transform:translateY(0)}
+.card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.card-title{font-size:17px;font-weight:700;color:var(--text);letter-spacing:1px}
+.card-arrow{font-size:18px;color:var(--accent)}
+.card-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:14px}
+.card-meta{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:4px 9px}
+.chip.hot{color:var(--accent);border-color:var(--accent)}
+
+.footer{text-align:center;padding:24px 20px 32px;font-size:10px;color:var(--text3);letter-spacing:1px;line-height:1.8}
+.footer .note{max-width:440px;margin:0 auto}
+</style>
+</head>
+<body>
+
+<div id="wrap">
+
+  <div class="brand">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#39d0ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 12l20-9-9 20-2-9-9-2z"/>
+      </svg>
+      <h1>SPTG2026</h1>
+    </div>
+    <div class="tag">APTITUDE TRAINERS</div>
+    <div class="sub">Practice tools for the Thai Airways Student Pilot selection aptitude battery. Each trainer runs entirely in your browser — your session history is saved locally on your own device.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">Select a Trainer</div>
+
+  <div class="cards">
+
+    <a class="card" href="sptg2026-stm-trainer.html" style="--accent:var(--purple)">
+      <div class="card-top">
+        <div class="card-title">Memory (STM)</div>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card-desc">Narrative short-term memory in the real Pro#1 format: read an aviation passage, survive a one-minute math interference phase, then answer 15 multiple-choice questions from memory.</div>
+      <div class="card-meta">
+        <span class="chip hot">Pro#1 format</span>
+        <span class="chip">3 min read</span>
+        <span class="chip">1 min math</span>
+        <span class="chip">15 questions</span>
+      </div>
+    </a>
+
+    <a class="card" href="sptg2026-series-trainer.html" style="--accent:var(--cyan)">
+      <div class="card-top">
+        <div class="card-title">Series Number</div>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card-desc">Number sequence pattern recognition across every type that appears in selection: arithmetic, geometric, Fibonacci, interleaved, alternating operations, difference patterns, grouping and more. Tracks accuracy by pattern type.</div>
+      <div class="card-meta">
+        <span class="chip hot">Confirmed annual</span>
+        <span class="chip">20 questions</span>
+        <span class="chip">12s per Q</span>
+        <span class="chip">Type tracking</span>
+      </div>
+    </a>
+
+    <a class="card" href="sptg2026-math-trainer.html" style="--accent:var(--green)">
+      <div class="card-top">
+        <div class="card-title">Mental Math</div>
+        <div class="card-arrow">→</div>
+      </div>
+      <div class="card-desc">Timed mental arithmetic with adjustable difficulty, plus a dedicated borrowing-subtraction drill. Tracks accuracy, average answer time, and performance on borrowing questions specifically.</div>
+      <div class="card-meta">
+        <span class="chip">Speed drill</span>
+        <span class="chip">Borrowing focus</span>
+        <span class="chip">Score tracking</span>
+      </div>
+    </a>
+
+  </div>
+
+</div>
+
+<div class="footer">
+  <div class="note">Independent study aid · Not affiliated with or endorsed by Thai Airways International · All progress saved locally in your browser</div>
+</div>
+
+</body>
+</html>
