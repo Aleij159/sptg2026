@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>SPTG2026 Series Picture Trainer</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07090f;--s1:#0d1117;--s2:#161b22;--border:#21262d;
+  --text:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --cyan:#39d0ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;--purple:#bc8cff;--orange:#ffa657;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Courier New',monospace;-webkit-tap-highlight-color:transparent}
+
+#hdr{background:var(--s1);border-bottom:1px solid var(--border);padding:14px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:center;gap:12px}
+.home-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid var(--border);border-radius:8px;color:var(--text2);text-decoration:none;font-size:16px;transition:all 0.15s;flex-shrink:0}
+.home-btn:hover{border-color:var(--orange);color:var(--orange)}
+.htitle{font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--orange)}
+.hbadge{font-size:10px;color:var(--text3);letter-spacing:1px;margin-left:auto}
+
+#main{max-width:680px;margin:0 auto;padding:20px 14px 80px}
+.phase{display:none}
+.phase.active{display:block}
+
+/* SETUP */
+.big-title{font-size:24px;font-weight:700;color:var(--orange);letter-spacing:2px;margin-bottom:6px;text-align:center}
+.sub{font-size:12px;color:var(--text2);margin-bottom:28px;text-align:center;line-height:1.6}
+.lbl{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);margin:18px 0 8px}
+.bgrp{display:flex;gap:8px}
+.bgrp button{flex:1;padding:13px 6px;font-size:12px;font-family:'Courier New',monospace;cursor:pointer;border:1px solid var(--border);background:var(--s1);color:var(--text2);border-radius:9px;transition:all 0.15s;letter-spacing:1px}
+.bgrp button.active{border-color:var(--orange);color:var(--orange);background:#2a1500}
+.go-btn{width:100%;margin-top:26px;padding:16px;font-size:13px;font-family:'Courier New',monospace;letter-spacing:3px;text-transform:uppercase;cursor:pointer;border:1px solid var(--orange);background:transparent;color:var(--orange);border-radius:10px;transition:all 0.2s}
+.go-btn:hover{background:var(--orange);color:var(--bg)}
+
+/* QUIZ */
+.qbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.qnum{font-size:11px;color:var(--text3);letter-spacing:2px}
+.qtimer{font-size:20px;font-weight:700;color:var(--cyan);letter-spacing:2px}
+.qtimer.warn{color:var(--yellow)}
+.qtimer.urgent{color:var(--red)}
+.seq-row{display:flex;gap:6px;justify-content:center;margin-bottom:6px;flex-wrap:nowrap}
+.frame{flex:1;max-width:110px;aspect-ratio:1;background:#fff;border:2px solid var(--border);border-radius:8px;overflow:hidden}
+.frame svg{width:100%;height:100%;display:block}
+.frame.qmark{display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:var(--orange);background:var(--s1);border-color:var(--orange)}
+.seq-label{text-align:center;font-size:10px;color:var(--text3);letter-spacing:2px;margin-bottom:18px}
+.opts-grid{display:flex;gap:6px;justify-content:center;margin-bottom:8px}
+.opt-cell{flex:1;max-width:110px;cursor:pointer}
+.opt-frame{aspect-ratio:1;background:#fff;border:2px solid var(--border);border-radius:8px;overflow:hidden;transition:all 0.15s}
+.opt-frame svg{width:100%;height:100%;display:block}
+.opt-cell:hover .opt-frame{border-color:var(--text2)}
+.opt-cell.selected .opt-frame{border-color:var(--orange);box-shadow:0 0 0 2px var(--orange)}
+.opt-cell.correct .opt-frame{border-color:var(--green);box-shadow:0 0 0 2px var(--green)}
+.opt-cell.wrong .opt-frame{border-color:var(--red);box-shadow:0 0 0 2px var(--red)}
+.opt-letter{text-align:center;font-size:12px;font-weight:700;color:var(--text2);margin-top:6px;letter-spacing:1px}
+
+/* RESULTS */
+.score-big{font-size:56px;font-weight:700;text-align:center;margin:18px 0 4px}
+.score-sub{font-size:12px;color:var(--text2);text-align:center;margin-bottom:22px}
+.res-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px}
+.rbox{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center}
+.rval{font-size:20px;font-weight:700}
+.rlbl{font-size:9px;color:var(--text3);letter-spacing:1px;margin-top:3px;text-transform:uppercase}
+.cat-box{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:18px}
+.cat-title{font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
+.cat-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cat-name{font-size:11px;color:var(--text2);width:130px;flex-shrink:0}
+.cat-bar-wrap{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.cat-bar{height:6px;border-radius:3px}
+.cat-pct{font-size:11px;width:60px;text-align:right;color:var(--text2)}
+.rev-item{background:var(--s1);border-radius:8px;padding:10px 14px;margin-bottom:6px;font-size:12px;border-left:3px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.rev-item.ok{border-left-color:var(--green)}
+.rev-item.bad{border-left-color:var(--red)}
+.rev-item.to{border-left-color:var(--yellow)}
+.again-btn{width:100%;padding:14px;font-size:13px;font-family:'Courier New',monospace;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border:1px solid var(--orange);background:transparent;color:var(--orange);border-radius:10px;margin-top:14px}
+.again-btn:hover{background:var(--orange);color:var(--bg)}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <a class="home-btn" href="index.html" title="Back to menu">⌂</a>
+  <div class="htitle">Series Picture</div>
+  <div class="hbadge">SPTG2026 · PRO#1</div>
+</div>
+
+<div id="main">
+
+<!-- SETUP -->
+<div id="phase-setup" class="phase active">
+  <div class="big-title">SERIES PICTURE</div>
+  <div class="sub">Sequence of 5 figures → choose the 6th<br>Same logic as the SIAP Series Picture test</div>
+  <div class="lbl">Difficulty</div>
+  <div class="bgrp" id="dgrp">
+    <button onclick="pick('dgrp',this,'diff',1)">EASY<br><span style="font-size:9px;opacity:0.6">1 rule</span></button>
+    <button class="active" onclick="pick('dgrp',this,'diff',2)">MEDIUM<br><span style="font-size:9px;opacity:0.6">2 rules</span></button>
+    <button onclick="pick('dgrp',this,'diff',3)">HARD<br><span style="font-size:9px;opacity:0.6">2-3 rules</span></button>
+  </div>
+  <div class="lbl">Time per question</div>
+  <div class="bgrp" id="tgrp">
+    <button onclick="pick('tgrp',this,'tl',20)">20s<br><span style="font-size:9px;opacity:0.6">sprint</span></button>
+    <button class="active" onclick="pick('tgrp',this,'tl',30)">30s<br><span style="font-size:9px;opacity:0.6">test pace</span></button>
+    <button onclick="pick('tgrp',this,'tl',50)">50s<br><span style="font-size:9px;opacity:0.6">training</span></button>
+  </div>
+  <div class="lbl">Questions</div>
+  <div class="bgrp" id="ngrp">
+    <button class="active" onclick="pick('ngrp',this,'nq',10)">10</button>
+    <button onclick="pick('ngrp',this,'nq',20)">20</button>
+    <button onclick="pick('ngrp',this,'nq',30)">30<br><span style="font-size:9px;opacity:0.6">full test</span></button>
+  </div>
+  <button class="go-btn" onclick="startQuiz()">START →</button>
+</div>
+
+<!-- QUIZ -->
+<div id="phase-quiz" class="phase">
+  <div class="qbar">
+    <div class="qnum" id="qnum">Q1 / 10</div>
+    <div class="qtimer" id="qtimer">30</div>
+  </div>
+  <div class="seq-row" id="seq-row"></div>
+  <div class="seq-label">WHAT COMES NEXT?</div>
+  <div class="opts-grid" id="opts-grid"></div>
+</div>
+
+<!-- RESULTS -->
+<div id="phase-results" class="phase">
+  <div class="score-big" id="score-big">0%</div>
+  <div class="score-sub" id="score-sub"></div>
+  <div class="res-grid" id="res-grid"></div>
+  <div class="cat-box" id="cat-box"></div>
+  <div id="rev-list"></div>
+  <button class="again-btn" onclick="resetQuiz()">AGAIN →</button>
+</div>
+
+</div>
+
+<script>
+// ===================== CONFIG/STATE =====================
+var cfg={diff:2,tl:30,nq:10};
+function pick(grp,btn,key,val){
+  document.getElementById(grp).querySelectorAll('button').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');cfg[key]=val;
+}
+var quiz={qs:[],idx:0,answers:[],timer:null,tleft:0,startT:0};
+
+function rInt(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function rPick(arr){return arr[rInt(0,arr.length-1)]}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=rInt(0,i);var t=a[i];a[i]=a[j];a[j]=t}return a}
+
+// ===================== SVG DRAWING =====================
+function svgWrap(inner){return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'+inner+'</svg>'}
+
+// arrow pointing up, rotated
+function drawArrow(rot,fill){
+  var f=fill==='filled'?'#1a1a1a':'none';
+  var path='M50 16 L72 50 L58 50 L58 82 L42 82 L42 50 L28 50 Z';
+  return '<g transform="rotate('+rot+',50,50)"><path d="'+path+'" fill="'+f+'" stroke="#1a1a1a" stroke-width="3"/></g>';
+}
+// L-tromino
+function drawL(rot,fill){
+  var f=fill==='filled'?'#1a1a1a':'none';
+  var path='M34 22 L52 22 L52 56 L74 56 L74 76 L34 76 Z';
+  return '<g transform="rotate('+rot+',50,50)"><path d="'+path+'" fill="'+f+'" stroke="#1a1a1a" stroke-width="3"/></g>';
+}
+// flag/triangle pointer
+function drawFlag(rot,fill){
+  var f=fill==='filled'?'#1a1a1a':'none';
+  return '<g transform="rotate('+rot+',50,50)"><path d="M50 14 L50 86 M50 18 L80 32 L50 46" fill="'+f+'" stroke="#1a1a1a" stroke-width="3" stroke-linejoin="round"/></g>';
+}
+var ROTSHAPES={arrow:drawArrow,L:drawL,flag:drawFlag};
+
+// pinwheel: 4 blades, alternating fill mask
+function drawPinwheel(rot,filledBlades){
+  var s='';
+  for(var i=0;i<4;i++){
+    var a=i*90;
+    var f=filledBlades[i%filledBlades.length]?'#2b2b6b':'none';
+    s+='<g transform="rotate('+(a+rot)+',50,50)"><path d="M50 50 L42 18 Q50 10 58 18 Z" fill="'+f+'" stroke="#1a1a1a" stroke-width="2.5"/></g>';
+  }
+  s+='<circle cx="50" cy="50" r="5" fill="#fff" stroke="#1a1a1a" stroke-width="2.5"/>';
+  return s;
+}
+// position cycle: 3x3 grid, filled square at perimeter index 0-7 clockwise from top-left
+var PERIM=[[0,0],[1,0],[2,0],[2,1],[2,2],[1,2],[0,2],[0,1]];
+function drawGridPos(posIdx,marker){
+  var s='';
+  for(var r=0;r<3;r++)for(var c=0;c<3;c++)
+    s+='<rect x="'+(8+c*28)+'" y="'+(8+r*28)+'" width="28" height="28" fill="none" stroke="#cccccc" stroke-width="1.5"/>';
+  var p=PERIM[((posIdx%8)+8)%8];
+  if(marker==='dot') s+='<circle cx="'+(8+p[0]*28+14)+'" cy="'+(8+p[1]*28+14)+'" r="9" fill="#1a1a1a"/>';
+  else s+='<rect x="'+(8+p[0]*28+5)+'" y="'+(8+p[1]*28+5)+'" width="18" height="18" fill="#1a1a1a"/>';
+  return s;
+}
+// dot count: arrange n dots rows of 4
+function drawDots(n){
+  var s='';var per=4;
+  for(var i=0;i<n;i++){
+    var r=Math.floor(i/per),c=i%per;
+    var rowCount=Math.min(per,n-r*per);
+    var x=50-(rowCount-1)*11+c*22;
+    var y=30+r*20;
+    s+='<circle cx="'+x+'" cy="'+y+'" r="7" fill="#1a1a1a"/>';
+  }
+  return s;
+}
+// polygon with sides, fill state, size
+function drawPoly(sides,fill,size){
+  var f=fill==='filled'?'#1a1a1a':(fill==='gray'?'#999':'none');
+  var pts=[];
+  for(var i=0;i<sides;i++){
+    var a=-Math.PI/2+i*2*Math.PI/sides;
+    pts.push((50+size*Math.cos(a)).toFixed(1)+','+(50+size*Math.sin(a)).toFixed(1));
+  }
+  return '<polygon points="'+pts.join(' ')+'" fill="'+f+'" stroke="#1a1a1a" stroke-width="3"/>';
+}
+// corner marker: small square at corner 0-3 (TL,TR,BR,BL)
+function drawCorner(ci,filled){
+  var pos=[[6,6],[80,6],[80,80],[6,80]][((ci%4)+4)%4];
+  return '<rect x="'+pos[0]+'" y="'+pos[1]+'" width="14" height="14" fill="'+(filled?'#1a1a1a':'none')+'" stroke="#1a1a1a" stroke-width="2.5"/>';
+}
+
+// ===================== QUESTION GENERATORS =====================
+// each returns {frames:[6 svg strings], distract:fn(i)->svg, type, hint}
+// frames[5] is the correct answer
+
+function genRotation(){
+  var shape=rPick(Object.keys(ROTSHAPES));
+  var step=rPick([45,90,-45,-90,135]);
+  var start=rInt(0,7)*45;
+  var draw=ROTSHAPES[shape];
+  var states=[];
+  for(var i=0;i<6;i++) states.push(start+step*i);
+  var frames=states.map(function(r){return svgWrap(draw(r,'hollow'))});
+  var correct=states[5];
+  var norm=function(v){return ((v%360)+360)%360};
+  var cn=norm(correct);
+  var cands=[correct+step,correct-step,correct+90,correct-90,correct+180,correct+45,correct+135];
+  var seen={};seen[cn]=true;
+  var ds=[];
+  cands.forEach(function(v){var n=norm(v);if(!seen[n]&&ds.length<4){seen[n]=true;ds.push(v)}});
+  var distractors=ds.map(function(r){return svgWrap(draw(r,'hollow'))});
+  return {frames:frames,distractors:distractors,type:'Rotation',hint:'rotates '+step+'° each frame'};
+}
+
+function genPosition(){
+  var step=rPick([1,2,3,-1,-2]);
+  var start=rInt(0,7);
+  var marker=rPick(['dot','square']);
+  var states=[];for(var i=0;i<6;i++)states.push(start+step*i);
+  var frames=states.map(function(p){return svgWrap(drawGridPos(p,marker))});
+  var c=states[5];
+  var ds=[c+1,c-1,c+2,c+4];
+  var distractors=ds.map(function(p){return svgWrap(drawGridPos(p,marker))});
+  return {frames:frames,distractors:distractors,type:'Position cycle',hint:'moves '+step+' cell(s) clockwise each frame'};
+}
+
+function genCount(){
+  var step=rPick([1,2]);
+  var start=rInt(1,3);
+  var states=[];for(var i=0;i<6;i++)states.push(start+step*i);
+  var frames=states.map(function(n){return svgWrap(drawDots(n))});
+  var c=states[5];
+  var ds=[c+1,c-1,c+step,c-step-1].filter(function(v,i,a){return v>0&&a.indexOf(v)===i});
+  while(ds.length<4)ds.push(c+ds.length+2);
+  var distractors=ds.slice(0,4).map(function(n){return svgWrap(drawDots(n))});
+  return {frames:frames,distractors:distractors,type:'Counting',hint:'+'+step+' dot(s) each frame'};
+}
+
+function genFillCycle(){
+  var fills=['filled','hollow','gray'];
+  var sides=rPick([3,4,5,6]);
+  var phase=rInt(0,2);
+  var states=[];for(var i=0;i<6;i++)states.push(fills[(phase+i)%3]);
+  var frames=states.map(function(f){return svgWrap(drawPoly(sides,f,30))});
+  var c=states[5];
+  var others=fills.filter(function(f){return f!==c});
+  var distractors=[
+    svgWrap(drawPoly(sides,others[0],30)),
+    svgWrap(drawPoly(sides,others[1],30)),
+    svgWrap(drawPoly(sides===6?3:sides+1,c,30)),
+    svgWrap(drawPoly(sides===3?6:sides-1,others[0],30)),
+  ];
+  return {frames:frames,distractors:distractors,type:'Fill cycle',hint:'fill cycles filled → hollow → gray'};
+}
+
+function genSize(){
+  var sizes=[14,22,30,38];
+  var dir=rPick([1,-1]);
+  var startIdx=dir===1?0:3;
+  var sides=rPick([3,4,5,6]);
+  // bounce pattern: grow then shrink
+  var seqIdx=[];var idx=startIdx,d=dir;
+  for(var i=0;i<6;i++){seqIdx.push(idx);idx+=d;if(idx===3||idx===0)d=-d;}
+  var frames=seqIdx.map(function(si){return svgWrap(drawPoly(sides,'hollow',sizes[si]))});
+  var c=seqIdx[5];
+  var ds=[0,1,2,3].filter(function(s){return s!==c});
+  var distractors=ds.map(function(si){return svgWrap(drawPoly(sides,'hollow',sizes[si]))});
+  distractors.push(svgWrap(drawPoly(sides===6?3:sides+1,'hollow',sizes[c])));
+  return {frames:frames,distractors:distractors.slice(0,4),type:'Size progression',hint:'size grows/shrinks with bounce'};
+}
+
+function genShapeCycle(){
+  var order=[3,4,5,6];
+  var phase=rInt(0,3);
+  var fillAlt=rPick([true,false]);
+  var states=[];for(var i=0;i<6;i++)states.push({s:order[(phase+i)%4],f:fillAlt?(i%2===0?'filled':'hollow'):'hollow'});
+  var frames=states.map(function(st){return svgWrap(drawPoly(st.s,st.f,30))});
+  var c=states[5];
+  var distractors=[
+    svgWrap(drawPoly(order[(order.indexOf(c.s)+1)%4],c.f,30)),
+    svgWrap(drawPoly(order[(order.indexOf(c.s)+3)%4],c.f,30)),
+    svgWrap(drawPoly(c.s,c.f==='filled'?'hollow':'filled',30)),
+    svgWrap(drawPoly(order[(order.indexOf(c.s)+2)%4],c.f==='filled'?'hollow':'filled',30)),
+  ];
+  return {frames:frames,distractors:distractors,type:'Shape cycle',hint:'shape cycles triangle→square→pentagon→hexagon'+(fillAlt?' with fill alternating':'')};
+}
+
+// MULTI 2-track: rotation + fill alternation
+function genMulti2(){
+  var shape=rPick(Object.keys(ROTSHAPES));
+  var draw=ROTSHAPES[shape];
+  var step=rPick([45,90,-45,-90]);
+  var start=rInt(0,7)*45;
+  var states=[];
+  for(var i=0;i<6;i++)states.push({r:start+step*i,f:i%2===0?'filled':'hollow'});
+  var frames=states.map(function(st){return svgWrap(draw(st.r,st.f))});
+  var c=states[5];
+  var distractors=[
+    svgWrap(draw(c.r,c.f==='filled'?'hollow':'filled')),
+    svgWrap(draw(c.r+step,c.f)),
+    svgWrap(draw(c.r-step,c.f==='filled'?'hollow':'filled')),
+    svgWrap(draw(c.r+180,c.f)),
+  ];
+  return {frames:frames,distractors:distractors,type:'Multi-track (2)',hint:'rotates '+step+'° AND fill alternates'};
+}
+
+// MULTI 2-track: pinwheel rotation + corner marker cycling
+function genMulti2b(){
+  var step=rPick([45,90]);
+  var start=rInt(0,3)*45;
+  var cstep=rPick([1,-1]);
+  var cstart=rInt(0,3);
+  var fmask=rPick([[true,false],[true,true,false],[false,true]]);
+  var states=[];
+  for(var i=0;i<6;i++)states.push({r:start+step*i,c:cstart+cstep*i});
+  var frames=states.map(function(st){return svgWrap(drawPinwheel(st.r,fmask)+drawCorner(st.c,true))});
+  var c=states[5];
+  var distractors=[
+    svgWrap(drawPinwheel(c.r,fmask)+drawCorner(c.c+1,true)),
+    svgWrap(drawPinwheel(c.r+step,fmask)+drawCorner(c.c,true)),
+    svgWrap(drawPinwheel(c.r,fmask)+drawCorner(c.c-1,true)),
+    svgWrap(drawPinwheel(c.r+step,fmask)+drawCorner(c.c+2,true)),
+  ];
+  return {frames:frames,distractors:distractors,type:'Multi-track (2)',hint:'pinwheel rotates '+step+'°, corner marker moves '+cstep+' corner(s)'};
+}
+
+// MULTI 3-track: shape rotation + fill alternation + corner marker
+function genMulti3(){
+  var shape=rPick(['arrow','flag']);
+  var draw=ROTSHAPES[shape];
+  var step=rPick([45,90,-90]);
+  var start=rInt(0,7)*45;
+  var cstep=rPick([1,-1]);
+  var cstart=rInt(0,3);
+  var states=[];
+  for(var i=0;i<6;i++)states.push({r:start+step*i,f:i%2===0?'hollow':'filled',c:cstart+cstep*i,cf:i%2===1});
+  var frames=states.map(function(st){return svgWrap(draw(st.r,st.f)+drawCorner(st.c,st.cf))});
+  var c=states[5];
+  var distractors=[
+    svgWrap(draw(c.r,c.f)+drawCorner(c.c+1,c.cf)),
+    svgWrap(draw(c.r+step,c.f)+drawCorner(c.c,c.cf)),
+    svgWrap(draw(c.r,c.f==='filled'?'hollow':'filled')+drawCorner(c.c,c.cf)),
+    svgWrap(draw(c.r,c.f)+drawCorner(c.c,!c.cf)),
+  ];
+  return {frames:frames,distractors:distractors,type:'Multi-track (3)',hint:'rotation + fill alternation + corner marker all change'};
+}
+
+var GEN_EASY=[genRotation,genPosition,genCount,genFillCycle,genSize,genShapeCycle];
+var GEN_MED=[genMulti2,genMulti2b,genRotation,genPosition,genShapeCycle,genMulti2];
+var GEN_HARD=[genMulti2,genMulti2b,genMulti3,genMulti3,genMulti2b];
+
+// ===================== QUIZ FLOW =====================
+function startQuiz(){
+  var pool=cfg.diff===1?GEN_EASY:cfg.diff===2?GEN_MED:GEN_HARD;
+  quiz.qs=[];
+  for(var i=0;i<cfg.nq;i++){
+    var g=rPick(pool)();
+    // assemble options: correct + 4 distractors, shuffled
+    var opts=[{svg:g.frames[5],correct:true}];
+    g.distractors.slice(0,4).forEach(function(d){opts.push({svg:d,correct:false})});
+    shuffle(opts);
+    g.options=opts;
+    g.ansIdx=opts.findIndex(function(o){return o.correct});
+    quiz.qs.push(g);
+  }
+  quiz.idx=0;quiz.answers=[];
+  showPhase('quiz');
+  renderQ();
+}
+
+function showPhase(id){
+  document.querySelectorAll('.phase').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('phase-'+id).classList.add('active');
+}
+
+function renderQ(){
+  var q=quiz.qs[quiz.idx];
+  document.getElementById('qnum').textContent='Q'+(quiz.idx+1)+' / '+cfg.nq;
+  var sr=document.getElementById('seq-row');
+  sr.innerHTML='';
+  for(var i=0;i<5;i++){
+    var d=document.createElement('div');d.className='frame';d.innerHTML=q.frames[i];sr.appendChild(d);
+  }
+  var qm=document.createElement('div');qm.className='frame qmark';qm.textContent='?';sr.appendChild(qm);
+  var og=document.getElementById('opts-grid');
+  og.innerHTML='';
+  q.options.forEach(function(o,oi){
+    var cell=document.createElement('div');
+    cell.className='opt-cell';cell.id='oc-'+oi;
+    cell.innerHTML='<div class="opt-frame">'+o.svg+'</div><div class="opt-letter">'+['A','B','C','D','E'][oi]+'</div>';
+    cell.onclick=function(){answer(oi)};
+    og.appendChild(cell);
+  });
+  quiz.startT=Date.now();
+  startQTimer();
+}
+
+function startQTimer(){
+  clearInterval(quiz.timer);
+  quiz.tleft=cfg.tl;
+  var el=document.getElementById('qtimer');
+  function tick(){
+    el.textContent=quiz.tleft;
+    el.className='qtimer'+(quiz.tleft<=5?' urgent':quiz.tleft<=10?' warn':'');
+    if(quiz.tleft<=0){clearInterval(quiz.timer);answer(-1);return}
+    quiz.tleft--;
+  }
+  tick();quiz.timer=setInterval(tick,1000);
+}
+
+function answer(oi){
+  clearInterval(quiz.timer);
+  var q=quiz.qs[quiz.idx];
+  var t=(Date.now()-quiz.startT)/1000;
+  var correct=oi===q.ansIdx;
+  quiz.answers.push({oi:oi,correct:correct,timeout:oi===-1,t:t,type:q.type,hint:q.hint,ansIdx:q.ansIdx});
+  // reveal
+  if(oi>=0){var c=document.getElementById('oc-'+oi);if(c)c.classList.add(correct?'correct':'wrong')}
+  var ca=document.getElementById('oc-'+q.ansIdx);if(ca)ca.classList.add('correct');
+  setTimeout(function(){
+    quiz.idx++;
+    if(quiz.idx>=cfg.nq)showResults();
+    else renderQ();
+  },oi===-1?900:700);
+}
+
+// ===================== RESULTS =====================
+function showResults(){
+  showPhase('results');
+  var correct=quiz.answers.filter(function(a){return a.correct}).length;
+  var timeouts=quiz.answers.filter(function(a){return a.timeout}).length;
+  var pct=Math.round(correct/cfg.nq*100);
+  var avgT=(quiz.answers.filter(function(a){return!a.timeout}).reduce(function(s,a){return s+a.t},0)/Math.max(1,cfg.nq-timeouts)).toFixed(1);
+  var sb=document.getElementById('score-big');
+  sb.textContent=pct+'%';
+  sb.style.color=pct>=80?'var(--green)':pct>=60?'var(--yellow)':'var(--red)';
+  document.getElementById('score-sub').textContent=correct+' / '+cfg.nq+' correct';
+  document.getElementById('res-grid').innerHTML=[
+    {v:correct,l:'Correct',c:'var(--green)'},
+    {v:(cfg.nq-correct-timeouts)+'+'+timeouts+'⏱',l:'Wrong + T/O',c:'var(--red)'},
+    {v:avgT+'s',l:'Avg time',c:'var(--cyan)'},
+  ].map(function(r){return '<div class="rbox"><div class="rval" style="color:'+r.c+'">'+r.v+'</div><div class="rlbl">'+r.l+'</div></div>'}).join('');
+
+  // type breakdown
+  var stats={};
+  quiz.answers.forEach(function(a){
+    if(!stats[a.type])stats[a.type]={c:0,t:0};
+    stats[a.type].t++;if(a.correct)stats[a.type].c++;
+  });
+  var cb='<div class="cat-title">Accuracy by type</div>';
+  Object.keys(stats).forEach(function(k){
+    var s=stats[k];var p=Math.round(s.c/s.t*100);
+    var col=p>=80?'var(--green)':p>=50?'var(--yellow)':'var(--red)';
+    cb+='<div class="cat-row"><div class="cat-name">'+k+'</div><div class="cat-bar-wrap"><div class="cat-bar" style="width:'+p+'%;background:'+col+'"></div></div><div class="cat-pct">'+s.c+'/'+s.t+'</div></div>';
+  });
+  document.getElementById('cat-box').innerHTML=cb;
+
+  // review
+  var rl='';
+  quiz.answers.forEach(function(a,i){
+    var cls=a.correct?'ok':a.timeout?'to':'bad';
+    var status=a.correct?'✓':a.timeout?'⏱ timeout':'✗ (correct: '+['A','B','C','D','E'][a.ansIdx]+')';
+    rl+='<div class="rev-item '+cls+'"><div><strong>Q'+(i+1)+'</strong> · '+a.type+'<br><span style="font-size:10px;color:var(--text3)">'+a.hint+'</span></div><div style="text-align:right;font-size:11px">'+status+'<br><span style="color:var(--text3)">'+(a.timeout?'':a.t.toFixed(1)+'s')+'</span></div></div>';
+  });
+  document.getElementById('rev-list').innerHTML=rl;
+}
+
+function resetQuiz(){showPhase('setup')}
+</script>
+</body>
+</html>
