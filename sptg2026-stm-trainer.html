@@ -161,7 +161,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Co
     <div class="tip-item">Answer phase: scan all 15 first, answer certain ones first</div>
   </div>
   <div style="margin-bottom:16px">
-    <div style="font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Select Passage</div>
+    <div style="font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Passage</div>
     <div class="pass-select" id="pass-select"></div>
   </div>
   <button class="go-btn" onclick="startRead()">START SESSION →</button>
@@ -217,91 +217,161 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Co
 // ============================================================
 // PASSAGE BANK
 // ============================================================
-var PASSAGES = [
-{
-  id:'P1', title:'Bangkok–Frankfurt Rotation',
-  text:`Captain Aniruth Chokdee, a Thai Airways pilot with over 16,000 flight hours, was assigned to a long-haul duty rotation spanning four international flights. The journey started in Bangkok and concluded in Frankfurt, with stopovers in Singapore, Tokyo Haneda, and Seoul Incheon. The flights operated under the numbers TG632, TG401, TG659, and TG676, all flown with a Boeing 777-300ER, registration HS-TTE.
+// ============================================================
+// PASSAGE GENERATOR — template-based, randomised each run
+// Same template, different numbers/names/runways every time,
+// so passages can be repeated without memorisation.
+// Questions & answers are built from the SAME drawn values,
+// so the correct answer is always consistent with the text.
+// ============================================================
 
-The first flight, TG632, departed Suvarnabhumi Airport on July 4 at 06:40 AM from Gate D4, using Runway 19L for takeoff, cruising at FL350 on a heading of 150°. Weather in Bangkok was partly cloudy, 27°C. The flight to Singapore took approximately 2 hours and 15 minutes, with touchdown at 10:15 AM local time on Runway 02C. On board were 269 passengers, including three unaccompanied minors and six passengers requiring assistance. Catering included 15 vegetarian Hindu meals. A minor concern was flagged during preflight: the left inboard fuel pump was inspected but cleared. Mid-flight, cabin crew member Panatda accidentally spilled orange juice on a Taiwanese passenger in seat 43C, prompting a quick cleanup and apology.
+function ri(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function pk(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function shuf(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=ri(0,i);var t=a[i];a[i]=a[j];a[j]=t}return a}
+function pad2(n){return (n<10?'0':'')+n}
+// build 4 wrong options near a numeric value
+function numDistractors(correct,spread){
+  var set={};set[correct]=true;var out=[];var guard=0;
+  while(out.length<3&&guard<50){guard++;var d=correct+(ri(0,1)?1:-1)*ri(1,spread);if(d>0&&!set[d]){set[d]=true;out.push(d)}}
+  while(out.length<3)out.push(correct+out.length+spread+1);
+  return out;
+}
+// build an MCQ {q, opts[5], ans index, cat} from a correct value + distractor list
+function mcq(qtext,correct,distractors,cat){
+  var c=String(correct);
+  var seen={};seen[c]=true;
+  var clean=[];
+  distractors.forEach(function(d){var s=String(d);if(!seen[s]){seen[s]=true;clean.push(s)}});
+  // backfill if collisions removed some — nudge numbers, suffix letters
+  var guard=0;
+  while(clean.length<3&&guard<60){
+    guard++;
+    var base=parseFloat(c);
+    var cand;
+    if(!isNaN(base)&&/^\d+(\.\d+)?$/.test(c)){
+      cand=String(Math.max(1,Math.round(base)+(ri(0,1)?1:-1)*ri(1,Math.max(3,Math.round(Math.abs(base)*0.1)+clean.length+1))));
+    } else {
+      cand=c+'·'+(clean.length+1); // last-resort unique token (rare)
+    }
+    if(!seen[cand]){seen[cand]=true;clean.push(cand)}
+  }
+  var opts=shuf([c].concat(clean.slice(0,3)));
+  return {q:qtext,opts:opts,ans:opts.indexOf(c),cat:cat};
+}
 
-After a 70-minute ground turnaround, the second leg, TG401, departed Singapore at 11:25 AM, bound for Tokyo Haneda. The flight climbed to FL370, cruising on a heading of 030°, with a total flight time of 6 hours and 40 minutes. The flight landed at 19:05 PM on Runway A. Among the 252 passengers were a Japanese senior tour group seated in rows 38-41. During baggage transfer, a diplomatic briefcase was mistakenly removed but retrieved in time. Light turbulence was experienced over the East China Sea, and in-flight announcements were made in Thai, English, and Japanese.
+// ---- pools ----
+var POOL={
+  captains:['Aniruth Chokdee','Wanchai Bunyarat','Siriporn Thanawat','Krit Sutthikun','Naphat Wong','Thanan Rojana','Decha Phongphan','Malee Srisai'],
+  rank:['Captain','First Officer'],
+  hotels:['Royal','Premier','Grand','Imperial','Regent','Sapphire','Continental'],
+  crew:['Panatda','Malee','Naphat','Somsak','Kanya','Pichai'],
+  aircraft:['Boeing 777-300ER','Airbus A330-300','Boeing 787-9','Airbus A350-900','Boeing 777-200ER'],
+  reg:['HS-TTE','HS-TEK','HS-TWB','HS-TGF','HS-TKD','HS-TNA','HS-TRC'],
+  cities:[
+    {c:'Bangkok',ap:'Suvarnabhumi'},{c:'Singapore',ap:'Changi'},{c:'Tokyo',ap:'Haneda'},
+    {c:'Seoul',ap:'Incheon'},{c:'Hong Kong',ap:'Chek Lap Kok'},{c:'Osaka',ap:'Kansai'},
+    {c:'Frankfurt',ap:'Main'},{c:'London',ap:'Heathrow'},{c:'Sydney',ap:'Kingsford'},
+    {c:'Taipei',ap:'Taoyuan'},{c:'Chiang Mai',ap:'International'},{c:'Phuket',ap:'International'}
+  ],
+  runways:['02C','19L','21L','25L','34L','24R','07C','09','36','13L','27L','04','16R'],
+  meals:['vegetarian Hindu','Buddhist vegetarian','Halal','Kosher','low-sodium','diabetic'],
+  incidents:[
+    'spilled orange juice on a passenger',
+    'a diplomatic briefcase was mistakenly removed but retrieved in time',
+    'a passenger experienced chest pains and first aid was administered',
+    'a faulty reading light was logged for repair',
+    'minor cosmetic damage to the left winglet was deferred',
+    'the forward galley oven was deactivated for the sector'
+  ],
+  nationalities:['Thai','Taiwanese','Japanese','Korean','Singaporean','German']
+};
 
-The crew then checked into the Royal Haneda Hotel, where Captain Aniruth stayed in Room 5317. Maintenance teams in Tokyo reported minor cosmetic damage to the left winglet, which was deferred for later repair. Following an 11-hour and 20-minute layover, they departed on TG659 at 06:25 AM for the short 2-hour and 25-minute hop to Seoul Incheon, flying at FL390 on a heading of 295°. The aircraft landed at 08:50 AM on Runway 34L. There were 241 passengers, including two infants and an opera singer carrying a fragile glass instrument, stored in Closet C. Meals featured a Thai breakfast and Korean bibimbap.
+// Generate one full passage object: {id,title,text,questions[15]}
+function generatePassage(){
+  // pick a 3-leg journey of distinct cities
+  var route=shuf(POOL.cities).slice(0,4); // 4 cities = 3 legs
+  var rank=pk(POOL.rank);
+  var capName=pk(POOL.captains);
+  var hours=ri(3,22)*1000+ri(0,9)*100;
+  var ac=pk(POOL.aircraft);
+  var reg=pk(POOL.reg);
+  var hotel=pk(POOL.hotels)+' '+route[2].c;
+  var room=ri(1,5)*1000+ri(0,4)*100+ri(0,9)*10+ri(0,9);
 
-The final leg, TG676, departed Incheon at 10:55 AM, headed for Frankfurt. The flight lasted 11 hours and 5 minutes, cruising at FL390 on a heading of 330° at Mach 0.84. The aircraft landed in Frankfurt at 16:00 local time on Runway 07C, concluding a complex and well-executed four-leg journey with only minor incidents logged.`,
-  questions:[
-    {q:'What was the aircraft registration used for all four flights?',opts:['HS-TGA','HS-TKT','HS-TTE','HS-THA'],ans:2,cat:'Details'},
-    {q:'How many total flight legs did Captain Aniruth complete?',opts:['3','4','5','6'],ans:1,cat:'Numbers'},
-    {q:'What was the flight number for the Bangkok to Singapore leg?',opts:['TG632','TG676','TG659','TG777'],ans:0,cat:'Sequences'},
-    {q:'At what time did TG632 depart from Bangkok?',opts:['10:15 AM','06:40 AM','08:55 AM','09:40 AM'],ans:1,cat:'Times'},
-    {q:'What was the runway number used for departure from Suvarnabhumi Airport?',opts:['02L','19R','01C','19L'],ans:3,cat:'Numbers'},
-    {q:'How many vegetarian Hindu meals were loaded on the flight to Singapore?',opts:['9','12','15','18'],ans:2,cat:'Numbers'},
-    {q:'What flight level was used for the Seoul to Frankfurt segment?',opts:['FL350','FL370','FL390','FL410'],ans:2,cat:'Numbers'},
-    {q:'On which seat did the cabin crew accidentally spill orange juice?',opts:['34H','43C','13D','09A'],ans:1,cat:'Details'},
-    {q:'How many passengers were on the flight from Tokyo to Seoul?',opts:['241','189','252','225'],ans:0,cat:'Numbers'},
-    {q:'What room number did Captain Aniruth stay in at the hotel?',opts:['4216','5120','1715','5317'],ans:3,cat:'Details'},
-    {q:'What was the heading used during the Singapore to Tokyo flight?',opts:['150°','295°','030°','330°'],ans:2,cat:'Numbers'},
-    {q:'What type of aircraft was used for the journey?',opts:['Boeing 777-300ER','Airbus 330-300','Boeing 777-200ER','Boeing 787-800'],ans:0,cat:'Details'},
-    {q:"Where was the diplomat's briefcase mistakenly removed?",opts:['Tokyo','Frankfurt','Seoul','Singapore'],ans:0,cat:'Details'},
-    {q:'What was the nationality of the passenger who had juice spilled on them?',opts:['Thai','Taiwanese','Japanese','Korean'],ans:1,cat:'Details'},
-    {q:'Where was light turbulence experienced during the journey?',opts:['Atlantic Ocean','Indian Sea','Pacific Ocean','East China Sea'],ans:3,cat:'Details'},
-  ]
-},
-{
-  id:'P2', title:'Chiang Mai–Osaka Rotation',
-  text:`First Officer Siriporn Thanawat, with 4,200 flight hours on the Airbus A330-300, was tasked with a three-leg positioning flight for Thai Airways. The rotation began in Chiang Mai and terminated in Osaka Kansai, with a technical stop at Bangkok and a crew change in Hong Kong. The flights were numbered TG118, TG628, and TG622, operated with aircraft registration HS-TEK.
+  // 3 flight numbers TGxxx, distinct
+  var fset={};var flights=[];
+  while(flights.length<3){var f='TG'+(ri(1,9)*100+ri(0,9)*10+ri(0,9));if(!fset[f]){fset[f]=1;flights.push(f)}}
 
-TG118 departed Chiang Mai International Airport on March 12 at 07:15 AM from Gate A2, using Runway 36 for departure. Outside temperature was 22°C with visibility of 8 kilometres. The flight climbed to FL280, cruising on a heading of 185° to Bangkok. Flight time was 1 hour and 10 minutes, landing at 08:25 AM on Runway 21L at Suvarnabhumi. The aircraft carried 187 passengers. Three passengers were travelling on diplomatic passports and were seated in row 2. The senior flight attendant, Khun Malee, reported a faulty reading light in seat 14A, which was noted in the technical log.
+  // per-leg data
+  var legs=[];
+  var depRunways=shuf(POOL.runways);
+  function pad3(n){return ('00'+n).slice(-3)}
+  for(var i=0;i<3;i++){
+    legs.push({
+      from:route[i].c, fromAp:route[i].ap, to:route[i+1].c,
+      flight:flights[i],
+      depTimeH:ri(5,22), depTimeM:pk([0,5,10,15,20,25,30,40,45,55]),
+      depRwy:depRunways[i*2], landRwy:depRunways[i*2+1],
+      fl:'FL'+ri(28,40)*10,
+      heading:pad3(ri(1,35)*10),
+      pax:ri(150,320),
+      flightH:ri(1,12), flightM:pk([5,10,15,20,25,35,40,45,55]),
+    });
+  }
+  function pad3b(n){return ('00'+n).slice(-3)}
 
-Ground handling at Bangkok took 95 minutes. TG628 then departed at 10:00 AM bound for Hong Kong International. The flight climbed to FL350, heading 045°, covering the distance in 2 hours and 35 minutes. There were 298 passengers including a school group of 42 students from Assumption College occupying rows 22-30. The aircraft landed on Runway 25L at 12:35 PM local Hong Kong time. During the approach, moderate rain was reported and the ILS approach was used for Runway 25L. Crew rest was taken at the Cathay Grand Hotel, room allocation for First Officer Siriporn was Room 2208.
+  // extra detail values
+  var mealType=pk(POOL.meals);
+  var mealCount=ri(8,30);
+  var crewName=pk(POOL.crew);
+  var nat=pk(POOL.nationalities);
+  var seatRow=ri(2,45);var seatCol=pk(['A','B','C','D','F']);
+  var students=ri(20,60);
+  var temp=ri(8,34);
 
-Following a 6-hour and 45-minute layover, TG622 departed Hong Kong at 19:20 PM bound for Osaka Kansai International. The flight cruised at FL390 on a heading of 055° for 3 hours and 20 minutes. There were 213 passengers on board. A medical incident occurred mid-flight when a 67-year-old male passenger experienced chest pains; the crew administered first aid and radioed ahead to Osaka. The aircraft landed at 23:40 PM local time on Runway 24R. Catering on this leg included 22 Buddhist vegetarian meals and 8 Halal meals. The aircraft was parked at Gate 16 upon arrival.`,
-  questions:[
-    {q:'What was the aircraft registration for all three flights?',opts:['HS-TGF','HS-TEK','HS-TKA','HS-TGK'],ans:1,cat:'Details'},
-    {q:'What runway was used for departure from Chiang Mai?',opts:['Runway 18','Runway 27','Runway 36','Runway 09'],ans:2,cat:'Numbers'},
-    {q:'What was the flight number from Bangkok to Hong Kong?',opts:['TG118','TG628','TG622','TG282'],ans:1,cat:'Sequences'},
-    {q:'How many passengers were on TG118 from Chiang Mai to Bangkok?',opts:['213','298','187','241'],ans:2,cat:'Numbers'},
-    {q:'What was the departure time of TG622 from Hong Kong?',opts:['12:35 PM','10:00 AM','19:20 PM','07:15 AM'],ans:2,cat:'Times'},
-    {q:'In which row was the faulty reading light reported?',opts:['Seat 2A','Seat 14A','Seat 22A','Seat 30A'],ans:1,cat:'Details'},
-    {q:'How many Buddhist vegetarian meals were loaded on the Osaka leg?',opts:['8','14','22','30'],ans:2,cat:'Numbers'},
-    {q:'What runway did TG628 land on in Hong Kong?',opts:['07R','25L','13C','28R'],ans:1,cat:'Numbers'},
-    {q:'What room did First Officer Siriporn stay in at the Hong Kong hotel?',opts:['1108','3308','2208','4412'],ans:2,cat:'Details'},
-    {q:'How many students from Assumption College were on TG628?',opts:['28','35','42','50'],ans:2,cat:'Numbers'},
-    {q:'What was the flight level used from Hong Kong to Osaka?',opts:['FL280','FL310','FL350','FL390'],ans:3,cat:'Numbers'},
-    {q:'What was the heading used for the Bangkok to Hong Kong flight?',opts:['185°','055°','045°','270°'],ans:2,cat:'Numbers'},
-    {q:'What gate was the aircraft parked at upon arrival in Osaka?',opts:['Gate 8','Gate 12','Gate 16','Gate 22'],ans:2,cat:'Details'},
-    {q:'What medical issue occurred on the Osaka flight?',opts:['Allergic reaction','Chest pains','Broken leg','Fainting'],ans:1,cat:'Details'},
-    {q:'What was the landing time at Osaka?',opts:['21:15 PM','22:50 PM','23:40 PM','00:15 AM'],ans:2,cat:'Times'},
-  ]
-},
-{
-  id:'P3', title:'Phuket–London Technical Rotation',
-  text:`Captain Wanchai Bunyarat, Thai Airways' most experienced B787 commander with 21,500 hours, was assigned an ultra-long-haul positioning flight from Phuket to London Heathrow, with technical stops in Colombo and Abu Dhabi. The rotation covered flights TG226, TG443, and TG910, all operated with a Boeing 787-9, registration HS-TWB.
+  // landing times derived
+  legs.forEach(function(l){
+    var totalMin=l.depTimeH*60+l.depTimeM+l.flightH*60+l.flightM;
+    totalMin=totalMin%(24*60);
+    l.landH=Math.floor(totalMin/60);l.landM=totalMin%60;
+  });
 
-TG226 departed Phuket International Airport on September 3 at 05:30 AM, using Runway 09 for departure. Ambient temperature was 29°C with scattered showers. The aircraft carried 156 passengers and cruised at FL310 on a heading of 270°. Flight time to Colombo Bandaranaike International was 2 hours and 50 minutes, landing at 07:05 AM local time on Runway 04. A Thai Buddhist monk travelling in row 5 was carrying ceremonial artefacts in two specially approved cargo containers. The purser, Khun Naphat, logged an issue with the forward galley oven which was deactivated for the sector.
+  function t(h,m){return pad2(h)+':'+pad2(m)}
 
-Ground time at Colombo was 110 minutes. TG443 departed at 08:55 AM with 224 passengers, climbing to FL380 and cruising on heading 315° toward Abu Dhabi International Airport. The sector took 4 hours and 15 minutes. The aircraft landed at 11:55 AM local time on Runway 13L. During cruise, the ACARS system transmitted an advisory for engine 2 vibration levels at 0.8 units — within limits but logged by maintenance control at Bangkok. The crew was accommodated at the Premier Abu Dhabi Hotel, where Captain Wanchai was assigned Room 1047.
+  // ---- BUILD TEXT ----
+  var text=
+    rank+' '+capName+', a Thai Airways pilot with over '+hours.toLocaleString()+' flight hours, was assigned to a duty rotation of three international flights. The journey began in '+route[0].c+' and concluded in '+route[3].c+', with stops in '+route[1].c+' and '+route[2].c+'. The flights operated under the numbers '+flights[0]+', '+flights[1]+', and '+flights[2]+', all flown with a '+ac+', registration '+reg+'.\n\n'+
 
-After a mandatory 12-hour rest period, TG910 departed Abu Dhabi at 00:10 AM on September 4, carrying 301 passengers including a full charter group of 88 Thai government officials. The flight cruised at FL400 on a heading of 330° at Mach 0.85, taking 7 hours and 45 minutes to reach London. The aircraft landed at Heathrow Terminal 2 on Runway 27L at 06:55 AM local time. Catering for the charter group included 88 special Thai royal cuisine meals prepared by the Dusit Thani team. Ground temperature at Heathrow was 11°C with overcast skies.`,
-  questions:[
-    {q:'What aircraft type was used for all three flights?',opts:['Boeing 777-300ER','Airbus A350-900','Boeing 787-9','Boeing 787-8'],ans:2,cat:'Details'},
-    {q:'What was the departure runway at Phuket?',opts:['Runway 27','Runway 18','Runway 09','Runway 36'],ans:2,cat:'Numbers'},
-    {q:'How many passengers were on the Colombo to Abu Dhabi flight?',opts:['156','224','301','188'],ans:1,cat:'Numbers'},
-    {q:'What was the departure time of TG910 from Abu Dhabi?',opts:['23:00 PM','00:10 AM','01:30 AM','22:45 PM'],ans:1,cat:'Times'},
-    {q:'What room did Captain Wanchai stay in at the Abu Dhabi hotel?',opts:['2047','1047','3012','4108'],ans:1,cat:'Details'},
-    {q:'What was the engine advisory level reported during TG443?',opts:['0.4 units','0.6 units','0.8 units','1.2 units'],ans:2,cat:'Details'},
-    {q:'How many Thai government officials were on the London flight?',opts:['68','78','88','98'],ans:2,cat:'Numbers'},
-    {q:'What flight level was used for the Abu Dhabi to London sector?',opts:['FL350','FL380','FL390','FL400'],ans:3,cat:'Numbers'},
-    {q:'What was the landing runway at London Heathrow?',opts:['09L','27R','27L','09R'],ans:2,cat:'Numbers'},
-    {q:'What galley equipment was deactivated on TG226?',opts:['Coffee machine','Forward galley oven','Rear beverage cart','Ice maker'],ans:1,cat:'Details'},
-    {q:'What was the ground temperature at Heathrow on arrival?',opts:['7°C','11°C','15°C','19°C'],ans:1,cat:'Numbers'},
-    {q:'How long was the ground time at Colombo?',opts:['75 minutes','95 minutes','110 minutes','125 minutes'],ans:2,cat:'Numbers'},
-    {q:'What was the heading from Abu Dhabi to London?',opts:['270°','315°','330°','045°'],ans:2,cat:'Numbers'},
-    {q:'What was the aircraft registration?',opts:['HS-TTE','HS-TWB','HS-TBK','HS-TWA'],ans:1,cat:'Details'},
-    {q:'What was the landing time at London Heathrow local time?',opts:['05:30 AM','06:55 AM','07:45 AM','08:10 AM'],ans:1,cat:'Times'},
-  ]
-},
-];
+    'The first flight, '+legs[0].flight+', departed '+route[0].ap+' Airport at '+t(legs[0].depTimeH,legs[0].depTimeM)+' using Runway '+legs[0].depRwy+' for takeoff, cruising at '+legs[0].fl+' on a heading of '+legs[0].heading+'°. Outside temperature was '+temp+'°C. The flight to '+route[1].c+' took '+legs[0].flightH+' hours and '+legs[0].flightM+' minutes, landing at '+t(legs[0].landH,legs[0].landM)+' on Runway '+legs[0].landRwy+'. On board were '+legs[0].pax+' passengers. Catering included '+mealCount+' '+mealType+' meals. Mid-flight, cabin crew member '+crewName+' spilled orange juice on a '+nat+' passenger seated in seat '+seatRow+seatCol+', prompting a quick apology.\n\n'+
+
+    'The second leg, '+legs[1].flight+', departed '+route[1].c+' at '+t(legs[1].depTimeH,legs[1].depTimeM)+' bound for '+route[2].c+'. The flight climbed to '+legs[1].fl+', cruising on a heading of '+legs[1].heading+'°, with a flight time of '+legs[1].flightH+' hours and '+legs[1].flightM+' minutes, landing at '+t(legs[1].landH,legs[1].landM)+' on Runway '+legs[1].landRwy+'. Among the '+legs[1].pax+' passengers was a school group of '+students+' students seated in the rear cabin. The crew then checked into the '+hotel+' Hotel, where '+rank+' '+capName.split(' ')[0]+' stayed in Room '+room+'.\n\n'+
+
+    'The final leg, '+legs[2].flight+', departed '+route[2].c+' at '+t(legs[2].depTimeH,legs[2].depTimeM)+', headed for '+route[3].c+'. The flight lasted '+legs[2].flightH+' hours and '+legs[2].flightM+' minutes, cruising at '+legs[2].fl+' on a heading of '+legs[2].heading+'°. There were '+legs[2].pax+' passengers on board. The aircraft landed at '+route[3].c+' at '+t(legs[2].landH,legs[2].landM)+' on Runway '+legs[2].landRwy+', concluding the rotation.';
+
+  // ---- BUILD 15 QUESTIONS from the SAME values ----
+  var Q=[];
+  Q.push(mcq('What was the aircraft registration used for all flights?',reg,shuf(POOL.reg.filter(function(r){return r!==reg})).slice(0,3),'Details'));
+  Q.push(mcq('What was the flight number for the '+route[0].c+' to '+route[1].c+' leg?',flights[0],[flights[1],flights[2],'TG'+(ri(1,9)*100+ri(10,99))],'Sequences'));
+  Q.push(mcq('At what time did '+legs[0].flight+' depart from '+route[0].c+'?',t(legs[0].depTimeH,legs[0].depTimeM),[t((legs[0].depTimeH+1)%24,legs[0].depTimeM),t(legs[0].depTimeH,(legs[0].depTimeM+15)%60),t((legs[0].depTimeH+2)%24,legs[0].depTimeM)],'Times'));
+  Q.push(mcq('What runway was used for departure from '+route[0].ap+'?',legs[0].depRwy,shuf(POOL.runways.filter(function(r){return r!==legs[0].depRwy})).slice(0,3),'Numbers'));
+  Q.push(mcq('How many '+mealType+' meals were loaded on the first flight?',mealCount,numDistractors(mealCount,5),'Numbers'));
+  Q.push(mcq('What flight level was used for the '+route[2].c+' to '+route[3].c+' segment?',legs[2].fl,['FL'+(parseInt(legs[2].fl.slice(2))+20),'FL'+(parseInt(legs[2].fl.slice(2))-20),'FL'+(parseInt(legs[2].fl.slice(2))+40)],'Numbers'));
+  Q.push(mcq('In which seat did the in-flight incident occur?',seatRow+seatCol,[(seatRow+3)+seatCol,(seatRow-1)+pk(['A','C','D']),seatRow+pk(['B','F'])],'Details'));
+  Q.push(mcq('How many passengers were on the '+route[1].c+' to '+route[2].c+' flight?',legs[1].pax,numDistractors(legs[1].pax,30),'Numbers'));
+  Q.push(mcq('What room did the pilot stay in at the hotel?',room,numDistractors(room,400),'Details'));
+  Q.push(mcq('What was the heading used during the '+route[1].c+' to '+route[2].c+' flight?',legs[1].heading+'°',[((parseInt(legs[1].heading)+30)%360)+'°',((parseInt(legs[1].heading)+180)%360)+'°',((parseInt(legs[1].heading)+90)%360)+'°'],'Numbers'));
+  Q.push(mcq('What type of aircraft was used?',ac,shuf(POOL.aircraft.filter(function(a){return a!==ac})).slice(0,3),'Details'));
+  Q.push(mcq('How many students were in the school group?',students,numDistractors(students,8),'Numbers'));
+  Q.push(mcq('What runway did the second flight land on?',legs[1].landRwy,shuf(POOL.runways.filter(function(r){return r!==legs[1].landRwy})).slice(0,3),'Numbers'));
+  Q.push(mcq('What was the landing time on the final leg?',t(legs[2].landH,legs[2].landM),[t((legs[2].landH+1)%24,legs[2].landM),t(legs[2].landH,(legs[2].landM+20)%60),t((legs[2].landH+2)%24,legs[2].landM)],'Times'));
+  Q.push(mcq('What was the nationality of the passenger involved in the incident?',nat,shuf(POOL.nationalities.filter(function(n){return n!==nat})).slice(0,3),'Details'));
+
+  return {id:'GEN',title:route[0].c+'–'+route[3].c+' Rotation',text:text,questions:Q};
+}
+
+// PASSAGES is now generated fresh; keep an array of 3 generators for the selector
+var PASSAGES = [generatePassage(),generatePassage(),generatePassage()];
+
 
 // ============================================================
 // MATH QUESTIONS BANK
@@ -335,17 +405,7 @@ var state={
 // ============================================================
 window.onload=function(){
   var sel=document.getElementById('pass-select');
-  PASSAGES.forEach(function(p,i){
-    var btn=document.createElement('button');
-    btn.className='ps-btn'+(i===0?' active':'');
-    btn.textContent=p.id+': '+p.title;
-    btn.onclick=function(){
-      state.passageIdx=i;
-      sel.querySelectorAll('.ps-btn').forEach(function(b){b.classList.remove('active')});
-      btn.classList.add('active');
-    };
-    sel.appendChild(btn);
-  });
+  if(sel) sel.innerHTML='<div style="font-size:11px;color:var(--text2);letter-spacing:1px;line-height:1.6">A fresh randomised passage is generated every session — same structure, different flights, numbers, times and runways each time. You can repeat indefinitely without memorising answers.</div>';
 };
 
 function showPhase(id){
@@ -358,6 +418,7 @@ function showPhase(id){
 // PHASE 1 — READ
 // ============================================================
 function startRead(){
+  PASSAGES[state.passageIdx]=generatePassage();
   var p=PASSAGES[state.passageIdx];
   // Render passage with highlights on numbers
   var html=p.text;

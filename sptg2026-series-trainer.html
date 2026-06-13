@@ -288,7 +288,7 @@ loadHist();
 
 /* ---- STATE ---- */
 var timeLimit=12;
-var questions=[],qIdx=0,correct=0,streak=0,bestStreak=0;
+var questions=[],qIdx=0,correct=0,streak=0,bestStreak=0,lastUserAns=null;
 var times=[],results=[],active=false;
 var timerInt=null,nextTimer=null;
 var sessStart=0,qStart=0;
@@ -555,6 +555,7 @@ function submitAns(){
   clearInterval(timerInt);timerInt=null;
   var v=parseFloat(document.getElementById('ain').value);
   if(isNaN(v)){startTimer();return;}
+  lastUserAns=v;
   handleResult(Math.abs(v-currentAns)<0.01,false);
 }
 
@@ -565,7 +566,7 @@ function handleResult(ok,timeout){
   times.push(el);
   var q=questions[qIdx];
   var state=ok?'correct':(timeout?'skipped':'wrong');
-  results.push({seq:q.seq,ans:q.ans,hint:q.hint,type:q.type,state:state,time:el.toFixed(1)});
+  results.push({seq:q.seq,ans:q.ans,hint:q.hint,type:q.type,state:state,time:el.toFixed(1),userAns:(timeout?null:lastUserAns)});
   var fb=document.getElementById('fb');
   if(ok){
     correct++;streak++;if(streak>bestStreak)bestStreak=streak;
@@ -638,6 +639,7 @@ function endSession(){
     d.className='rev-row '+r.state;
     d.innerHTML='<div class="rev-left">'
       +'<div class="rev-seq">'+r.seq.join(', ')+', .... = <strong class="rev-ans">'+r.ans+'</strong></div>'
+      +(r.state==='wrong'&&r.userAns!=null?'<div class="rev-hint" style="color:var(--red)">you answered: '+r.userAns+'</div>':'')
       +'<div class="rev-hint">'+r.hint+'</div>'
       +'</div>'
       +'<div class="rev-right">'
